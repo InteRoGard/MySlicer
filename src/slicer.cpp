@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <cmath>
 // #include <libstl/stl.h>
 // #include <memory>
 
@@ -89,32 +90,143 @@ Slicer::Vertex Slicer::find_intersection_point(pair<Slicer::Vertex, Slicer::Vert
 }
 
 vector<Slicer::Vertex> Slicer::find_cross_points(Slicer::Triangle triangle, double height) {
-    if ((triangle.v[0].z > height && triangle.v[1].z > height && triangle.v[2].z > height) || 
-        (triangle.v[0].z < height && triangle.v[1].z < height && triangle.v[2].z < height)) {
+    if ((triangle.v[0].z > height && triangle.v[1].z > height && triangle.v[2].z > height)
+    || (triangle.v[0].z < height && triangle.v[1].z < height && triangle.v[2].z < height)) {
         return {};
     }
     vector<Slicer::Vertex> cross_points;
     for (auto side: {make_pair(triangle.v[0], triangle.v[1]),
                     make_pair(triangle.v[1], triangle.v[2]),
                     make_pair(triangle.v[0], triangle.v[2])}) {
-        Slicer::Vertex intersection_point = Slicer::find_intersection_point(side, height);
-        if (Slicer::is_point_on_side(intersection_point, side, height)) {
-            cross_points.push_back(intersection_point);
-        }
+        if ((side.first.z != side.second.z) && (side.first.z != height)) {
+            Slicer::Vertex intersection_point = Slicer::find_intersection_point(side, height);
+            if (Slicer::is_point_on_side(intersection_point, side, height)) {
+                cross_points.push_back(intersection_point);
+            }
+        } else if (side.first.z != side.second.z) {
+            cross_points.push_back(side.first);
+            cross_points.push_back(side.second);
+        } /*else if (side.first.z == side.second.z) {
+            cross_points.push_back(side.first.z);
+        }*/
     }
     return cross_points;
 }
 
+vector<Slicer::Vertex> Slicer::shift_edge(Slicer::Vertex vertex1, Slicer::Vertex vertex2, double step)
+{
+    vector<Slicer::Vertex> shifted_edge;
+    Slicer::Vertex direction = {
+        vertex2.x - vertex1.x,
+        vertex2.y - vertex1.y,
+        vertex2.z - vertex1.z};
+        
+    double length = sqrt(direction.x * direction.x 
+        + direction.y * direction.y + direction.z * direction.z);
+
+    direction.x /= length;
+    direction.y /= length;
+    direction.z /= length;
+    Slicer::Vertex perpendicular = {-direction.y, direction.x, 0};
+
+    length = std::sqrt(perpendicular.x * perpendicular.x 
+        + perpendicular.y * perpendicular.y + perpendicular.z * perpendicular.z);
+    perpendicular.x /= length;
+    perpendicular.y /= length;
+    perpendicular.z /= length;
+
+    Slicer::Vertex shiftedVertex1 = {
+        vertex1.x + perpendicular.x * step, 
+        vertex1.y + perpendicular.y * step, 
+        vertex1.z + perpendicular.z * step};
+
+    Slicer::Vertex shiftedVertex2 = {
+        vertex2.x + perpendicular.x * step, 
+        vertex2.y + perpendicular.y * step, 
+        vertex2.z + perpendicular.z * step};
+
+    shifted_edge.push_back(shiftedVertex1);
+    shifted_edge.push_back(shiftedVertex2);
+
+    return shifted_edge;
+}
+
+Slicer::Vertex Slicer::calc_edge_intersection(vector<Slicer::Vertex> edge1, vector<Slicer::Vertex> edge2) {
+    Slicer::Vertex point1 = edge1[0];
+    Slicer::Vertex point2 = edge1[1];
+    Slicer::Vertex point3 = edge2[0];
+    Slicer::Vertex point4 = edge2[1];
+
+    Slicer::Vertex direction1 = {
+        point2.x - point1.x,
+        point2.y - point1.y,
+        point2.z - point1.z};
+    Slicer::Vertex direction2 = {
+        point4.x - point3.x,
+        point4.y - point3.y,
+        point4.z - point3.z};
+    Slicer::Vertex check_direction = direction1.x * direction2.x + direction1.y * direction2.y + direction1.z * direction2.z;
+    if ((check_direction.x == direction1.x) && (check_direction.y == direction1.y) && (check_direction.z == direction1.z)) {
+        return point2;
+    }
+    Slicer::Vertex perp1 = {-direction1.y, direction1.x, 0};
+    Slicer::Vertex perp2 = {-direction2.y, direction2.x, 0};
+
+    double t = ((point3.x - point1.x) * perp2.x + (point3.y - point1.y) * perp2.y + (point3.z - point1.z) * perp2.z) 
+        / (direction1.x * perp2.x + direction1.y * perp2.y + direction1.z * perp2.z);
+    double u = ((point1.x - point3.x) * perp1.x + (point1.y - point3.y) * perp1.y + (point1.z - point3.z) * perp1.z) 
+        / (direction2.x * perp1.x + direction2.y * perp1.y + direction2.z * perp1.z);
+
+    Slicer::Vertex intersection = {
+        point1.x + t * direction1.x, 
+        point1.y + t * direction1.y, 
+        point1.z + t * direction1.z};
+
+    return intersection;
+}
+
 vector<Slicer::Vertex> Slicer::calc_external_contour(double height){
-
+    vector<Slicer::Vertex> external_contour;
+    for (int i = 0; i < Slicer::side_triangles.size(); i++) {
+        Slicer::Triangle triangle = Slicer::side_triangles[i];
+        vector<Slicer::Vertex> cross_points = Slicer::find_cross_points(triangle, height);
+        external_contour.push_back(cross_points[0]);
+        external_contour.push_back(cross_points[1]);
+    }
+    return external_contour;
 }
 
-vector<Slicer::Vertex> Slicer::calc_internal_contour(vector<Slicer::Vertex> external_contour, double height){
+vector<Slicer::Vertex> Slicer::calc_internal_contour(vector<Slicer::Vertex> external_contour){
+    vector<Slicer::Vertex> internal_contour;
+    for (int i = 0; i < external_contour.size(); i++) {
+        int next1, next2;
+        if (i == external_contour.size()-2) {
+            next1 = i + 1;
+            next2 = 0;
+        } else if (i == external_contour.size()-1) {
+            next1 = 0;
+            next2 = 1
+        } else {
+            next1 = i + 1;
+            next2 = i + 2;
+        }
+        Slicer::Vertex vertex1 = external_contour[i];
+        Slicer::Vertex vertex2 = external_contour[next1];
+        Slicer::Vertex vertex3 = external_contour[next2];
 
+        vector<Slicer::Vertex> shift_edge1 = Slicer::shift_edge(vertex1, vertex2, Slicer::extrusion_width);
+        vector<Slicer::Vertex> shift_edge2 = Slicer::shift_edge(vertex2, vertex3, Slicer::extrusion_width);
+        Slicer::Vertex shift_vertex = Slicer::calc_edge_intersection(shift_edge1, shift_edge2);
+
+        internal_contour.push_back(shift_vertex);
+    }
+    return internal_contour;
 }
 
-vector<Slicer::Vertex> Slicer::fill_plate(vector<Slicer::Vertex> internal_contour){
-    
+vector<Slicer::Vertex> Slicer::calc_fill_plate(vector<Slicer::Vertex> internal_contour){
+    vector<Slicer::Vertex> fill_plate;
+
+    return fill_plate;
 }
 
 void Slicer::updateGCODE(vector<vector<Slicer::Vertex>> sequence_of_points) {
@@ -130,14 +242,14 @@ void Slicer::Slice() {
         vector<vector<Slicer::Vertex>> sequence_of_points;
         vector<Slicer::Vertex> external_contour = Slicer::calc_external_contour(h);
         sequence_of_points.push_back(external_contour);
-        
+
         for (int contour_count = 0; contour_count < num_perimeters-1; contour_count++) {
-            vector<Slicer::Vertex> internal_contour = Slicer::calc_internal_contour;
+            vector<Slicer::Vertex> internal_contour = Slicer::calc_internal_contour(external_contour);
             sequence_of_points.push_back(internal_contour);
-        }
-        if ((h == 0) || (h == obj_h - layer_h)) {
-            vector<Slicer::Vertex> fill_contour = Slicer::fill_plate();
-            sequence_of_points.push_back(fill_contour);
+            if (((h == 0) || (h == obj_h)) && (contour_count == num_perimeters-2)) {
+                vector<Slicer::Vertex> fill_contour = Slicer::calc_fill_plate(internal_contour);
+                sequence_of_points.push_back(fill_contour);
+            }
         }
         Slicer::updateGCODE(sequence_of_points);
     }
