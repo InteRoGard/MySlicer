@@ -8,34 +8,42 @@
 
 class Slicer {
 public:
-    Slicer(const std::string& filename = "input.txt", 
+    Slicer(
+        const std::string& filename = "input.txt", 
         double layer_height = 0.02,
         double extrusion_width = 0.4,
         int number_of_perimeters = 2);
-    
-    void setSize(double size);
-    void setSize(double length, double width, double height);
-    
-    std::vector<double> object_size = std::vector<double>(3, 0.0);
-    std::string objectType;
-    double layer_height;
-    double extrusion_width;
-    int number_of_perimeters;
+    // std::vector<double> object_size = std::vector<double>(3, 10.0);
+    std::string objectType = "";
+    double layer_height = 0.2;
+    double extrusion_width = 0.3;
+    int number_of_perimeters = 2;
 
 private:
-    struct Point {
+    struct Vertex {
         double x, y, z;
     };
     struct Triangle {
-        Point A, B, C;
+        std::vector<Vertex> v = std::vector<Vertex>(3, {0, 0, 0});
+        std::vector<double> normal = std::vector<double>(3, 0.0);
     };
 
-    bool is_point_on_side(Point point, std::pair<Point, Point> side, double height);
-    Point find_intersection_point(std::pair<Point, Point> edge, double height);
-    std::vector<Point> find_cross_points(Triangle triangle, double height);
-    void Slice();
-    void updateGCODE();
+    double obj_height = 0.0;
+    std::vector<Triangle> side_triangles = std::vector<Triangle> {};
+    std::vector<Triangle> plain_triangles = std::vector<Triangle> {};
 
+    // std::vector<Triangle> read_stl_file(const std::string& filename);
+    void calc_cube_triangles(double length, double width, double height);
+    bool is_point_on_side(Vertex point, std::pair<Vertex, Vertex> side, double height);
+    Vertex find_intersection_point(std::pair<Vertex, Vertex> edge, double height);
+    std::vector<Vertex> find_cross_points(Triangle triangle, double height);
+
+    std::vector<Vertex> calc_external_contour(double height);
+    std::vector<Vertex> calc_internal_contour(std::vector<Vertex> external_contour, double height);
+    std::vector<Vertex> fill_plate(std::vector<Vertex> internal_contour);
+
+    void updateGCODE(std::vector<std::vector<Slicer::Vertex>> sequence_of_points);
+    void Slice();
 };
 
 #endif // SLICER_HPP

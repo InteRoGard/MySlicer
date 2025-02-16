@@ -8,7 +8,7 @@ using namespace std;
 int main()
 {
     Slicer slicer{"input.txt"};
-    
+    sclicer.Slice();
 
     return 0;
 }
