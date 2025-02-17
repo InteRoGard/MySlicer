@@ -2,13 +2,15 @@
 #include "src/slicer.cpp"
 
 #include <iostream>
+#include <memory>
 
 using namespace std;
 
 int main()
 {
-    Slicer slicer{"input.txt"};
-    slicer.Slice();
+    auto slicer = make_unique<Slicer>("input.txt");
+    slicer->Slice();
+    
 
     return 0;
 }

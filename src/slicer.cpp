@@ -20,20 +20,23 @@ Slicer::Slicer(
     if (file.is_open()) {
         getline(file, Slicer::objectType);
         if (Slicer::objectType == "куб") {
-            double side;
-            file >> side;
-            Slicer::obj_height = side;
-            Slicer::calc_cube_triangles(side, side, side);
+            double *side = new double;;
+            file >> *side;
+            Slicer::obj_height = *side;
+            Slicer::calc_cube_triangles(*side, *side, *side);
         } else if (Slicer::objectType == "параллелепипед") {
-            double length, width, height;
-            file >> length >> width >> height;
-            Slicer::obj_height = height;
-            Slicer::calc_cube_triangles(length, width, height);
+            double* length = new double;
+            double* width = new double;
+            double* height = new double;
+            file >> *length >> *width >> *height;
+            Slicer::obj_height = *height;
+            Slicer::calc_cube_triangles(*length, *width, *height);
         } else {
             cout << "Неизвестный тип объекта" << endl;
         }
     }
     file.close();
+    // cout << "file was closed" << endl;
 }
 
 void Slicer::calc_cube_triangles(double length, double width, double height) {
@@ -49,19 +52,20 @@ void Slicer::calc_cube_triangles(double length, double width, double height) {
         {0,         width,  height}
     };
     for (int i = 0; i < 4; i++) {
-        vector<Slicer::Vertex> vert3 = vector<Slicer::Vertex>{3, {0, 0, 0}};
+        vector<Slicer::Vertex>* vert3 = new vector<Slicer::Vertex>;
         if (i < 3) {
-            vector<Slicer::Vertex> vert3 = {vert[i], vert[i+1], vert[i+3], vert[i+4]};
+            *vert3 = {vert[i], vert[i+1], vert[i+3], vert[i+4]};
         } else if (i == 3) {
-            vector<Slicer::Vertex> vert3 = {vert[i], vert[i-3], vert[i+1], vert[i+4]};
+            *vert3 = {vert[i], vert[i-3], vert[i+1], vert[i+4]};
         }
-        Slicer::Triangle triangle1, triangle2;
+        Slicer::Triangle* triangle1 = new Slicer::Triangle;
+        Slicer::Triangle* triangle2 = new Slicer::Triangle;
         for (int j = 0; j < 4; j++) {
-            triangle1.v[j] = vert3[j];
-            triangle2.v[j] = vert3[j+1];
+            triangle1->v[j] = (*vert3)[j];
+            triangle2->v[j] = (*vert3)[j+1];
         }
-        Slicer::side_triangles.push_back(triangle1);
-        Slicer::side_triangles.push_back(triangle2);
+        Slicer::side_triangles.push_back(*triangle1);
+        Slicer::side_triangles.push_back(*triangle2);
     }
     for (int i = 0; i < 2; i++) {
         int k = i * 2;
@@ -71,11 +75,13 @@ void Slicer::calc_cube_triangles(double length, double width, double height) {
         Slicer::plain_triangles.push_back(triangle1);
         Slicer::plain_triangles.push_back(triangle2);
     }
+    // cout << "calc_cube_triangles finished" << endl;
 }
 
 bool Slicer::is_point_on_side(Slicer::Vertex point, pair<Slicer::Vertex, Slicer::Vertex> side, double height) {
     Slicer::Vertex V1 = side.first;
     Slicer::Vertex V2 = side.second;
+    // cout << "is_point_on_side finished" << endl;
     return min(V1.x, V2.x) <= point.x && point.x <= max(V1.x, V2.x) &&
         min(V1.y, V2.y) <= point.y && point.y <= max(V1.y, V2.y) &&
         point.z == height;
@@ -86,6 +92,7 @@ Slicer::Vertex Slicer::find_intersection_point(pair<Slicer::Vertex, Slicer::Vert
     Vertex V2 = edge.second;
     double x = V1.x + (V2.x - V1.x) * (height - V1.z) / (V2.z - V1.z);
     double y = V1.y + (V2.y - V1.y) * (height - V1.z) / (V2.z - V1.z);
+    // cout << "find_intersection_point finished" << endl;
     return {x, y, height};
 }
 
@@ -110,6 +117,7 @@ vector<Slicer::Vertex> Slicer::find_cross_points(Slicer::Triangle triangle, doub
             cross_points.push_back(side.first.z);
         }*/
     }
+    // cout << "find_cross_points finished" << endl;
     return cross_points;
 }
 
@@ -147,7 +155,7 @@ vector<Slicer::Vertex> Slicer::shift_edge(Slicer::Vertex vertex1, Slicer::Vertex
 
     shifted_edge.push_back(shiftedVertex1);
     shifted_edge.push_back(shiftedVertex2);
-
+    // cout << "shift_edge finished" << endl;
     return shifted_edge;
 }
 
@@ -165,7 +173,10 @@ Slicer::Vertex Slicer::calc_edge_intersection(vector<Slicer::Vertex> edge1, vect
         point4.x - point3.x,
         point4.y - point3.y,
         point4.z - point3.z};
-    Slicer::Vertex check_direction = direction1.x * direction2.x + direction1.y * direction2.y + direction1.z * direction2.z;
+    Slicer::Vertex check_direction = {
+        direction1.x * direction2.x,
+        direction1.y * direction2.y,
+        direction1.z * direction2.z};
     if ((check_direction.x == direction1.x) && (check_direction.y == direction1.y) && (check_direction.z == direction1.z)) {
         return point2;
     }
@@ -181,7 +192,7 @@ Slicer::Vertex Slicer::calc_edge_intersection(vector<Slicer::Vertex> edge1, vect
         point1.x + t * direction1.x, 
         point1.y + t * direction1.y, 
         point1.z + t * direction1.z};
-
+    // cout << "calc_edge_intersection finished" << endl;
     return intersection;
 }
 
@@ -190,9 +201,15 @@ vector<Slicer::Vertex> Slicer::calc_external_contour(double height){
     for (int i = 0; i < Slicer::side_triangles.size(); i++) {
         Slicer::Triangle triangle = Slicer::side_triangles[i];
         vector<Slicer::Vertex> cross_points = Slicer::find_cross_points(triangle, height);
-        external_contour.push_back(cross_points[0]);
-        external_contour.push_back(cross_points[1]);
+        if (cross_points.size() < 2) {
+            continue; // пропускаем треугольник, если у него нет двух точек пересечения
+        }
+        Slicer::Vertex a = cross_points[0];
+        Slicer::Vertex b = cross_points[1];
+        external_contour.push_back(a);
+        external_contour.push_back(b);
     }
+    // cout << "calc_external_contour finished" << endl;
     return external_contour;
 }
 
@@ -205,7 +222,7 @@ vector<Slicer::Vertex> Slicer::calc_internal_contour(vector<Slicer::Vertex> exte
             next2 = 0;
         } else if (i == external_contour.size()-1) {
             next1 = 0;
-            next2 = 1
+            next2 = 1;
         } else {
             next1 = i + 1;
             next2 = i + 2;
@@ -220,37 +237,57 @@ vector<Slicer::Vertex> Slicer::calc_internal_contour(vector<Slicer::Vertex> exte
 
         internal_contour.push_back(shift_vertex);
     }
+    // cout << "calc_internal_contour finished" << endl;
     return internal_contour;
 }
 
 vector<Slicer::Vertex> Slicer::calc_fill_plate(vector<Slicer::Vertex> internal_contour){
     vector<Slicer::Vertex> fill_plate;
-
-    return fill_plate;
+    // cout << "calc_fill_plate finished" << endl;
+    return {};
 }
 
 void Slicer::updateGCODE(vector<vector<Slicer::Vertex>> sequence_of_points) {
+    ofstream output("output.txt");
+    if (!output.is_open()) {
+        cout << "Error opening file" << endl;
+        return;
+    }
 
+    double x = 0, y = 0, z = 0;
+    for (int i = 0; i < sequence_of_points.size(); i++) {
+        for (int j = 0; j < sequence_of_points[i].size(); j++) {
+            double f = (j == 0 && i > 0) ? 200 : 100;
+            output << "G01 X" << sequence_of_points[i][j].x << " Y" << sequence_of_points[i][j].y << " Z" << sequence_of_points[i][j].z << " F" << f << endl;
+            x = sequence_of_points[i][j].x;
+            y = sequence_of_points[i][j].y;
+            z = sequence_of_points[i][j].z;
+        }
+    }
+    output.close();
 }
 
 void Slicer::Slice() {
     double obj_h = Slicer::obj_height;
     double layer_h = Slicer::layer_height;
     int num_perimeters = Slicer::number_of_perimeters;
+    vector<vector<Slicer::Vertex>> sequence_of_points;
 
     for (double h = 0; h < obj_h; h += layer_h) {
-        vector<vector<Slicer::Vertex>> sequence_of_points;
+        // vector<Slicer::Vertex> sequence_of_points;
         vector<Slicer::Vertex> external_contour = Slicer::calc_external_contour(h);
         sequence_of_points.push_back(external_contour);
 
-        for (int contour_count = 0; contour_count < num_perimeters-1; contour_count++) {
-            vector<Slicer::Vertex> internal_contour = Slicer::calc_internal_contour(external_contour);
-            sequence_of_points.push_back(internal_contour);
-            if (((h == 0) || (h == obj_h)) && (contour_count == num_perimeters-2)) {
-                vector<Slicer::Vertex> fill_contour = Slicer::calc_fill_plate(internal_contour);
-                sequence_of_points.push_back(fill_contour);
-            }
-        }
-        Slicer::updateGCODE(sequence_of_points);
+        // for (int contour_count = 0; contour_count < num_perimeters-1; contour_count++) {
+        //     vector<Slicer::Vertex> internal_contour = Slicer::calc_internal_contour(external_contour);
+        //     sequence_of_points.push_back(internal_contour);
+        //     if (((h == 0) || (h == obj_h)) && (contour_count == num_perimeters-2)) {
+        //         vector<Slicer::Vertex> fill_contour = Slicer::calc_fill_plate(internal_contour);
+        //         sequence_of_points.push_back(fill_contour);
+        //     }
+        // }
+        
     }
+    Slicer::updateGCODE(sequence_of_points);
+    cout << "Slice finished!" << endl;
 }

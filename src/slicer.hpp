@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <memory>
 
 class Slicer {
 public:
@@ -19,7 +20,9 @@ public:
     double extrusion_width = 0.3;
     int number_of_perimeters = 2;
 
-// private:
+    void Slice();
+
+private:
     struct Vertex {
         double x, y, z;
     };
@@ -32,20 +35,18 @@ public:
     std::vector<Triangle> side_triangles = std::vector<Triangle> {};
     std::vector<Triangle> plain_triangles = std::vector<Triangle> {};
 
-    // std::vector<Triangle> read_stl_file(const std::string& filename);
     void calc_cube_triangles(double length, double width, double height);
     bool is_point_on_side(Vertex point, std::pair<Vertex, Vertex> side, double height);
     Vertex find_intersection_point(std::pair<Vertex, Vertex> edge, double height);
-    std::vector<Vertex> find_cross_points(Triangle triangle);
+    std::vector<Vertex> find_cross_points(Triangle triangle, double height);
     std::vector<Vertex> shift_edge(Vertex vertex1, Vertex vertex2, double step);
     Vertex calc_edge_intersection(std::vector<Vertex> edge1, std::vector<Vertex> edge2);
 
     std::vector<Vertex> calc_external_contour(double height);
-    std::vector<Vertex> calc_internal_contour(std::vector<Vertex> external_contour, double height);
+    std::vector<Vertex> calc_internal_contour(std::vector<Vertex> external_contour);
     std::vector<Vertex> calc_fill_plate(std::vector<Vertex> internal_contour);
 
     void updateGCODE(std::vector<std::vector<Slicer::Vertex>> sequence_of_points);
-    void Slice();
 };
 
 #endif // SLICER_HPP
