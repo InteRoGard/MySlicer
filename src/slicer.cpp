@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <algorithm>
 // #include <libstl/stl.h>
 // #include <memory>
 
@@ -54,16 +55,22 @@ void Slicer::calc_cube_triangles(double length, double width, double height) {
     for (int i = 0; i < 4; i++) {
         vector<Slicer::Vertex>* vert3 = new vector<Slicer::Vertex>;
         if (i < 3) {
-            *vert3 = {vert[i], vert[i+1], vert[i+3], vert[i+4]};
+            *vert3 = {vert[i], vert[i+1], vert[i+5], vert[i+4]};
         } else if (i == 3) {
             *vert3 = {vert[i], vert[i-3], vert[i+1], vert[i+4]};
         }
         Slicer::Triangle* triangle1 = new Slicer::Triangle;
         Slicer::Triangle* triangle2 = new Slicer::Triangle;
-        for (int j = 0; j < 4; j++) {
-            triangle1->v[j] = (*vert3)[j];
-            triangle2->v[j] = (*vert3)[j+1];
-        }
+        // for (int j = 0; j < 3; j++) {
+        //     triangle1->v[j] = (*vert3)[j];
+        //     // triangle2->v[j] = (*vert3)[j+1];
+        // }
+        triangle1->v[0] = (*vert3)[0];
+        triangle1->v[1] = (*vert3)[1];
+        triangle1->v[2] = (*vert3)[2];
+        triangle2->v[0] = (*vert3)[0];
+        triangle2->v[1] = (*vert3)[2];
+        triangle2->v[2] = (*vert3)[3];
         Slicer::side_triangles.push_back(*triangle1);
         Slicer::side_triangles.push_back(*triangle2);
     }
@@ -104,18 +111,16 @@ vector<Slicer::Vertex> Slicer::find_cross_points(Slicer::Triangle triangle, doub
     vector<Slicer::Vertex> cross_points;
     for (auto side: {make_pair(triangle.v[0], triangle.v[1]),
                     make_pair(triangle.v[1], triangle.v[2]),
-                    make_pair(triangle.v[0], triangle.v[2])}) {
-        if ((side.first.z != side.second.z) && (side.first.z != height)) {
+                    make_pair(triangle.v[0], triangle.v[2])}){
+        if (side.first.z != side.second.z) {
             Slicer::Vertex intersection_point = Slicer::find_intersection_point(side, height);
             if (Slicer::is_point_on_side(intersection_point, side, height)) {
                 cross_points.push_back(intersection_point);
             }
-        } else if (side.first.z != side.second.z) {
-            cross_points.push_back(side.first);
-            cross_points.push_back(side.second);
-        } /*else if (side.first.z == side.second.z) {
-            cross_points.push_back(side.first.z);
-        }*/
+        } else if ((side.first.z == side.second.z) && (side.first.z == height)) {
+                cross_points.push_back(side.first);
+                cross_points.push_back(side.second);
+        }
     }
     // cout << "find_cross_points finished" << endl;
     return cross_points;
@@ -198,17 +203,20 @@ Slicer::Vertex Slicer::calc_edge_intersection(vector<Slicer::Vertex> edge1, vect
 
 vector<Slicer::Vertex> Slicer::calc_external_contour(double height){
     vector<Slicer::Vertex> external_contour;
-    for (int i = 0; i < Slicer::side_triangles.size(); i++) {
+    Slicer::Vertex buf;
+    for (int i = 0; i < Slicer::side_triangles.size(); i += 2) {
         Slicer::Triangle triangle = Slicer::side_triangles[i];
         vector<Slicer::Vertex> cross_points = Slicer::find_cross_points(triangle, height);
         if (cross_points.size() < 2) {
             continue; // пропускаем треугольник, если у него нет двух точек пересечения
         }
         Slicer::Vertex a = cross_points[0];
-        Slicer::Vertex b = cross_points[1];
+        if (i==0) { buf = a;}
+        // Slicer::Vertex b = cross_points[1];
         external_contour.push_back(a);
-        external_contour.push_back(b);
+        // external_contour.push_back(b);
     }
+    external_contour.push_back(buf);
     // cout << "calc_external_contour finished" << endl;
     return external_contour;
 }
@@ -277,14 +285,11 @@ void Slicer::Slice() {
         // vector<Slicer::Vertex> sequence_of_points;
         vector<Slicer::Vertex> external_contour = Slicer::calc_external_contour(h);
         sequence_of_points.push_back(external_contour);
-
+        
+        // // Расчет внутреннего контура, раскомментировать:
         // for (int contour_count = 0; contour_count < num_perimeters-1; contour_count++) {
         //     vector<Slicer::Vertex> internal_contour = Slicer::calc_internal_contour(external_contour);
         //     sequence_of_points.push_back(internal_contour);
-        //     if (((h == 0) || (h == obj_h)) && (contour_count == num_perimeters-2)) {
-        //         vector<Slicer::Vertex> fill_contour = Slicer::calc_fill_plate(internal_contour);
-        //         sequence_of_points.push_back(fill_contour);
-        //     }
         // }
         
     }
